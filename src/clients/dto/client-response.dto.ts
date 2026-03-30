@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsBoolean } from 'class-validator';
 import { LeadSector } from '../../crm/entities/lead.entity';
 
 export class ClientListItemDto {
@@ -135,5 +136,6 @@ export class UpdateClientStatusDto {
     description: 'Nuevo estado del cliente',
     example: true
   })
+  @IsBoolean()
   active: boolean;
 }
