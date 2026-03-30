@@ -135,7 +135,7 @@ export class AuthController {
     @Body(ValidationPipe) registrationDto: CompleteRegistrationDto,
     @UploadedFiles() files?: Express.Multer.File[]
   ): Promise<{ message: string }> {
-    return this.authService.completeRegistration(registrationDto);
+    return this.authService.completeRegistration(registrationDto, files);
   }
 
   // Password Recovery Endpoints

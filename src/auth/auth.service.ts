@@ -22,6 +22,7 @@ import { CompleteRegistrationDto } from '../companies/dto/create-company.dto';
 import { Company } from '../companies/entities/company.entity';
 import { CompaniesService } from '../companies/companies.service';
 import { EmailService } from '../common/services/email.service';
+import { FileUploadService } from '../common/services/file-upload.service';
 
 @Injectable()
 export class AuthService {
@@ -31,6 +32,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly companiesService: CompaniesService,
     private readonly emailService: EmailService,
+    private readonly fileUploadService: FileUploadService,
   ) {}
 
   async register(createUserDto: CreateUserDto): Promise<AuthResponseDto> {
@@ -121,7 +123,7 @@ export class AuthService {
     };
   }
 
-  async completeRegistration(registrationDto: CompleteRegistrationDto): Promise<{ message: string }> {
+  async completeRegistration(registrationDto: CompleteRegistrationDto, files?: Express.Multer.File[]): Promise<{ message: string }> {
     // Validar que las contraseñas coincidan
     if (registrationDto.password !== registrationDto.confirmPassword) {
       throw new BadRequestException('Las contraseñas no coinciden');
@@ -137,15 +139,18 @@ export class AuthService {
     }
 
     try {
+      // Procesar archivos subidos si los hay
+      const updatedRegistrationDto = await this.processUploadedFiles(registrationDto, files);
+      
       // Crear la empresa
-      const company = await this.companiesService.create(registrationDto.company);
+      const company = await this.companiesService.create(updatedRegistrationDto.company);
 
       // Crear el usuario asociado a la empresa
       const user = this.userRepository.create({
-        email: registrationDto.email.toLowerCase().trim(),
-        password: registrationDto.password,
-        firstName: registrationDto.firstName,
-        lastName: registrationDto.lastName,
+        email: updatedRegistrationDto.email.toLowerCase().trim(),
+        password: updatedRegistrationDto.password,
+        firstName: updatedRegistrationDto.firstName,
+        lastName: updatedRegistrationDto.lastName,
         company: company,
         role: 'user' as any,
         isActive: true,
@@ -171,6 +176,82 @@ export class AuthService {
       }
       
       throw new BadRequestException('Error al procesar el registro. Por favor intente nuevamente.');
+    }
+  }
+
+  private async processUploadedFiles(
+    registrationDto: CompleteRegistrationDto,
+    files?: Express.Multer.File[]
+  ): Promise<CompleteRegistrationDto> {
+    if (!files || files.length === 0) {
+      return registrationDto;
+    }
+
+    const documentUrls: { [key: string]: string } = {};
+    
+    try {
+      for (const file of files) {
+        const uploadedUrl = await this.fileUploadService.uploadFile(file, 'legal-documents');
+        this.assignDocumentUrl(file, documentUrls, uploadedUrl);
+      }
+
+      return {
+        ...registrationDto,
+        company: {
+          ...registrationDto.company,
+          ...documentUrls,
+        },
+      };
+    } catch (error) {
+      // Limpiar archivos en caso de error
+      await this.cleanupFiles(files);
+      throw error;
+    }
+  }
+
+  private assignDocumentUrl(
+    file: Express.Multer.File,
+    documentUrls: { [key: string]: string },
+    uploadedUrl: string
+  ): void {
+    const fileName = file.originalname.toLowerCase();
+    
+    if (fileName.includes('camara') || fileName.includes('commerce')) {
+      documentUrls.chamberOfCommerceUrl = uploadedUrl;
+    } else if (fileName.includes('rut')) {
+      documentUrls.rutUrl = uploadedUrl;
+    } else if (fileName.includes('cedula') || fileName.includes('id')) {
+      documentUrls.legalRepresentativeIdUrl = uploadedUrl;
+    } else {
+      // Asignar al primer campo disponible
+      this.assignToFirstAvailableField(documentUrls, uploadedUrl);
+    }
+  }
+
+  private assignToFirstAvailableField(
+    documentUrls: { [key: string]: string },
+    uploadedUrl: string
+  ): void {
+    if (!documentUrls.chamberOfCommerceUrl) {
+      documentUrls.chamberOfCommerceUrl = uploadedUrl;
+    } else if (!documentUrls.rutUrl) {
+      documentUrls.rutUrl = uploadedUrl;
+    } else if (!documentUrls.legalRepresentativeIdUrl) {
+      documentUrls.legalRepresentativeIdUrl = uploadedUrl;
+    }
+  }
+
+  private async cleanupFiles(files?: Express.Multer.File[]): Promise<void> {
+    if (!files || files.length === 0) {
+      return;
+    }
+
+    for (const file of files) {
+      try {
+        await this.fileUploadService.deleteFile(file.path);
+      } catch (cleanupError) {
+        console.error('Error cleaning up file:', cleanupError);
+      }
     }
   }
 

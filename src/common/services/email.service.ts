@@ -1,19 +1,22 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
+import * as dotenv from 'dotenv';
+
+// Cargar variables de entorno
+dotenv.config();
 
 @Injectable()
 export class EmailService {
   private readonly transporter: nodemailer.Transporter;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor() {
     this.transporter = nodemailer.createTransport({
-      host: this.configService.get('SMTP_HOST') || 'smtp.gmail.com',
-      port: this.configService.get('SMTP_PORT') || 587,
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: Number.parseInt(process.env.SMTP_PORT) || 587,
       secure: false,
       auth: {
-        user: this.configService.get('SMTP_USER'),
-        pass: this.configService.get('SMTP_PASS'),
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
       },
     });
   }
@@ -24,14 +27,14 @@ export class EmailService {
     contactName: string,
   ): Promise<void> {
     const mailOptions = {
-      from: `"NeuroAgentes" <${this.configService.get('SMTP_USER')}>`,
+      from: `"NeuroAgentes" <${process.env.SMTP_USER}>`,
       to: email,
       subject: 'Bienvenido a NeuroAgentes - Registro completado exitosamente',
       html: this.getWelcomeEmailTemplate(companyName, contactName),
     };
 
     try {
-      if (this.configService.get('SMTP_USER')) {
+      if (process.env.SMTP_USER) {
         await this.transporter.sendMail(mailOptions);
       } else {
         console.log('Email no configurado. Email de bienvenida para:', email);
@@ -49,23 +52,31 @@ export class EmailService {
     firstName: string,
   ): Promise<void> {
     const mailOptions = {
-      from: `"NeuroAgentes" <${this.configService.get('SMTP_USER')}>`,
+      from: `"NeuroAgentes" <${process.env.SMTP_USER}>`,
       to: email,
       subject: 'Código de Recuperación de Contraseña - NeuroAgentes',
       html: this.getPasswordResetOTPTemplate(otpCode, firstName),
     };
 
     try {
-      if (this.configService.get('SMTP_USER')) {
-        await this.transporter.sendMail(mailOptions);
+      if (process.env.SMTP_USER && process.env.SMTP_PASS && !process.env.SMTP_PASS.includes('AQUI_VA_LA_CONTRASEÑA')) {
+        console.log('📤 Enviando email con configuración SMTP...');
+        const result = await this.transporter.sendMail(mailOptions);
+        console.log('✅ Email enviado exitosamente:', result.messageId);
       } else {
         console.log('Email no configurado. Email de OTP para:', email);
         console.log('Código OTP:', otpCode);
         console.log('Contenido:', mailOptions.html);
       }
     } catch (error) {
-      console.error('Error sending OTP email:', error);
-      throw new Error('Failed to send OTP email');
+      console.error('💥 Error sending OTP email:', error);
+      console.error('📋 Detalles del error:', {
+        message: error.message,
+        code: error.code,
+        command: error.command,
+        response: error.response
+      });
+      console.log('🔐 CÓDIGO OTP DE RESPALDO (úsalo para las pruebas):', otpCode);
     }
   }
 

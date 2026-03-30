@@ -10,6 +10,7 @@ import { LocalStrategy } from './strategies/local.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { CompaniesModule } from '../companies/companies.module';
 import { EmailService } from '../common/services/email.service';
+import { FileUploadService } from '../common/services/file-upload.service';
 
 @Module({
   imports: [
@@ -28,7 +29,7 @@ import { EmailService } from '../common/services/email.service';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, LocalStrategy, JwtStrategy, EmailService],
+  providers: [AuthService, LocalStrategy, JwtStrategy, EmailService, FileUploadService],
   exports: [AuthService, JwtModule],
 })
 export class AuthModule {}

@@ -1,5 +1,26 @@
-import { IsString, IsNotEmpty, IsOptional, IsBoolean, IsEmail } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsBoolean, IsEmail, ValidateNested, registerDecorator, ValidationOptions, ValidationArguments } from 'class-validator';
+import { Type, Transform } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
+
+// Validador personalizado para términos aceptados
+function IsTrue(validationOptions?: ValidationOptions) {
+  return function (object: Object, propertyName: string) {
+    registerDecorator({
+      name: 'isTrue',
+      target: object.constructor,
+      propertyName: propertyName,
+      options: validationOptions,
+      validator: {
+        validate(value: any, args: ValidationArguments) {
+          return value === true;
+        },
+        defaultMessage(args: ValidationArguments) {
+          return 'Debe aceptar los términos y condiciones';
+        },
+      },
+    });
+  };
+}
 
 export class CreateCompanyDto {
   @ApiProperty({ description: 'Nombre de la empresa' })
@@ -54,6 +75,13 @@ export class CreateCompanyDto {
 
   @ApiProperty({ description: 'Aceptación de términos y condiciones' })
   @IsBoolean()
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      return value === 'true' || value === '1' || value.toLowerCase() === 'true';
+    }
+    return Boolean(value);
+  })
+  @IsTrue({ message: 'Debe aceptar los términos y condiciones para completar el registro' })
   termsAccepted: boolean;
 }
 
@@ -61,6 +89,8 @@ export class CreateCompanyDto {
 export class CompleteRegistrationDto {
   // Datos de la empresa
   @ApiProperty({ description: 'Datos de la empresa' })
+  @ValidateNested()
+  @Type(() => CreateCompanyDto)
   company: CreateCompanyDto;
 
   // Datos del contacto principal
