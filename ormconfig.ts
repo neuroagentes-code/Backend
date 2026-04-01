@@ -11,8 +11,16 @@ export default new DataSource({
   username: process.env.DATABASE_USERNAME || 'jhoncuervo',
   password: process.env.DATABASE_PASSWORD || '',
   database: process.env.DATABASE_NAME || 'neuroagentes',
-  entities: ['src/**/*.entity.ts'],
-  migrations: ['src/migrations/*.ts'],
+  entities: [
+    process.env.NODE_ENV === 'production'
+      ? 'dist/src/**/*.entity.js'
+      : 'src/**/*.entity.ts',
+  ],
+  migrations: [
+    process.env.NODE_ENV === 'production'
+      ? 'dist/src/migrations/*.js'
+      : 'src/migrations/*.ts',
+  ],
   synchronize: false, // Disable sync to use migrations only
   logging: process.env.NODE_ENV === 'development',
 });
