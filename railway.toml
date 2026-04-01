@@ -2,5 +2,4 @@
 builder = "dockerfile"
 
 [deploy]
-releaseCommand = "node node_modules/typeorm/cli.js migration:run -d dist/ormconfig.js"
 startCommand = "node dist/src/main.js"

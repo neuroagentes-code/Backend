@@ -55,5 +55,5 @@ EXPOSE 3000
 # Use dumb-init for proper signal handling
 ENTRYPOINT ["dumb-init", "--"]
 
-# Start the application
-CMD ["node", "dist/src/main.js"]
+# Start the application (run migrations first, then start the server)
+CMD ["sh", "-c", "NODE_ENV=production node node_modules/typeorm/cli.js migration:run -d dist/ormconfig.js && node dist/src/main.js"]
