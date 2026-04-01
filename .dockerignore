@@ -1,0 +1,51 @@
+# Dependency directories
+node_modules/
+npm-debug.log*
+
+# Build output
+dist/
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Testing
+coverage/
+.nyc_output
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+README.md
+
+# Temporary files
+*.tmp
+*.temp
+
+# Logs
+logs/
+*.log
+
+# Upload directories (if they contain temporary files)
+uploads/temp/
+
+# Documentation and reports (optional, remove if needed in production)
+*.md
+REPORTE_*
