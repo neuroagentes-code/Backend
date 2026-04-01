@@ -14,7 +14,10 @@ RUN npm ci
 COPY . .
 
 # Build the application
-RUN npm run build
+RUN npm run build && \
+    echo "Build successful" && \
+    ls -la dist/ && \
+    test -f dist/src/main.js || (echo "ERROR: dist/src/main.js not found after build!" && exit 1)
 
 # Production stage
 FROM node:20-alpine AS production
@@ -49,4 +52,4 @@ EXPOSE 3000
 ENTRYPOINT ["dumb-init", "--"]
 
 # Start the application
-CMD ["node", "dist/main.js"]
+CMD ["node", "dist/src/main.js"]
