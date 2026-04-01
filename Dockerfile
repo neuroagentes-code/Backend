@@ -9,7 +9,9 @@ RUN npm ci
 COPY . .
 
 RUN npm run build && \
-    test -f dist/src/main.js || (echo "ERROR: dist/src/main.js not found!" && exit 1)
+    npx tsc ormconfig.ts --module commonjs --target ES2021 --esModuleInterop true --outDir dist --skipLibCheck true && \
+    test -f dist/src/main.js || (echo "ERROR: dist/src/main.js not found!" && exit 1) && \
+    test -f dist/ormconfig.js || (echo "ERROR: dist/ormconfig.js not found!" && exit 1)
 
 # Production stage
 FROM node:20-alpine AS production
