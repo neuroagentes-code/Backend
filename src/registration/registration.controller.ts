@@ -17,9 +17,11 @@ import { FileUploadService } from '../common/services/file-upload.service';
 import { Public } from '../auth/decorators/auth.decorators';
 
 // Configuración de multer para validar archivos
+const UPLOADS_TEMP_DIR = '/usr/src/app/uploads/temp';
+
 const multerOptions = {
   storage: diskStorage({
-    destination: './uploads/temp',
+    destination: UPLOADS_TEMP_DIR,
     filename: (req, file, cb) => {
       const randomName = new Array(32).fill(null).map(() => (Math.round(Math.random() * 16)).toString(16)).join('');
       cb(null, `${randomName}${extname(file.originalname)}`);

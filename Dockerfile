@@ -42,6 +42,10 @@ RUN npm ci --only=production && \
 # Copy built application from builder stage
 COPY --from=builder --chown=nestjs:nodejs /usr/src/app/dist ./dist
 
+# Create uploads directories with correct permissions
+RUN mkdir -p /usr/src/app/uploads/temp /usr/src/app/uploads/legal-documents && \
+    chown -R nestjs:nodejs /usr/src/app/uploads
+
 # Switch to non-root user
 USER nestjs
 
