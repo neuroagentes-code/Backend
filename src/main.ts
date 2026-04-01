@@ -20,7 +20,7 @@ async function bootstrap() {
 
   // CORS
   app.enableCors({
-    origin: process.env.NODE_ENV !== 'production',
+    origin: true,
     credentials: true,
   });
 
@@ -46,7 +46,7 @@ async function bootstrap() {
   app.useGlobalFilters(new AllExceptionsFilter());
 
   // Swagger documentation
-  if (configService.get('app.nodeEnv') !== 'production') {
+  if (configService.get('app.nodeEnv') !== 'production' || process.env.ENABLE_SWAGGER === 'true') {
     const config = new DocumentBuilder()
       .setTitle('NeuroAgentes BackOffice API')
       .setDescription(`
