@@ -14,7 +14,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { Throttle } from '@nestjs/throttler';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { AuthService } from './auth.service';
-import { CreateUserDto, LoginDto, AuthResponseDto, ForgotPasswordDto, VerifyOtpDto, ResetPasswordDto } from './dto/auth.dto';
+import { CreateUserDto, LoginDto, AuthResponseDto, AuthMeResponseDto, ForgotPasswordDto, VerifyOtpDto, ResetPasswordDto } from './dto/auth.dto';
 import { LocalAuthGuard, JwtAuthGuard } from './guards/auth.guards';
 import { GetUser, Public } from './decorators/auth.decorators';
 import { User } from './entities/user.entity';
@@ -105,6 +105,34 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getProfile(@GetUser() user: User): Promise<User> {
     return user;
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Verificar sesión activa del usuario (Auth Me)',
+    description: 'Verifica si el token JWT es válido y devuelve la información del usuario autenticado. Úsalo para comprobar si el usuario sigue logueado.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Sesión activa — el usuario está autenticado',
+    type: AuthMeResponseDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'No autenticado — token inválido, expirado o ausente',
+    schema: {
+      example: {
+        statusCode: 401,
+        message: 'Unauthorized',
+        error: 'Unauthorized',
+      },
+    },
+  })
+  async getMe(@GetUser() user: User): Promise<AuthMeResponseDto> {
+    return this.authService.getMe(user.id);
   }
 
   @Public()
