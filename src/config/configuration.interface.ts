@@ -32,10 +32,19 @@ export interface EmailConfig {
   secure: boolean;
 }
 
+export interface S3Config {
+  accessKeyId: string;
+  secretAccessKey: string;
+  bucketName: string;
+  region: string;
+  endpoint?: string;
+}
+
 export interface Config {
   database: DatabaseConfig;
   jwt: JwtConfig;
   app: AppConfig;
   throttle: ThrottleConfig;
   email: EmailConfig;
+  aws: S3Config;
 }

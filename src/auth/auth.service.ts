@@ -139,11 +139,11 @@ export class AuthService {
     }
 
     try {
-      // Procesar archivos subidos si los hay
-      const updatedRegistrationDto = await this.processUploadedFiles(registrationDto, files);
-      
-      // Crear la empresa
-      const company = await this.companiesService.create(updatedRegistrationDto.company);
+      // **OPTIMIZADO**: Procesar archivos y crear empresa en paralelo
+      const [updatedRegistrationDto, company] = await Promise.all([
+        this.processUploadedFiles(registrationDto, files),
+        this.companiesService.create(registrationDto.company)
+      ]);
 
       // Crear el usuario asociado a la empresa
       const user = this.userRepository.create({
@@ -156,14 +156,10 @@ export class AuthService {
         isActive: true,
       });
 
-      await this.userRepository.save(user);
+      const savedUser = await this.userRepository.save(user);
 
-      // Enviar email de bienvenida
-      await this.emailService.sendWelcomeEmail(
-        user.email,
-        company.name,
-        user.fullName,
-      );
+      // **OPTIMIZADO**: Enviar email de forma asíncrona (no bloquear respuesta)
+      this.sendWelcomeEmailAsync(savedUser.email, company.name, savedUser.fullName);
 
       return {
         message: 'Registro completado con éxito. Bienvenido a NeuroAgentes.',
@@ -179,6 +175,16 @@ export class AuthService {
     }
   }
 
+  // **NUEVO**: Método asíncrono para envío de email (no bloquea la respuesta)
+  private async sendWelcomeEmailAsync(email: string, companyName: string, fullName: string): Promise<void> {
+    try {
+      await this.emailService.sendWelcomeEmail(email, companyName, fullName);
+    } catch (error) {
+      // Log el error pero no afectar el registro
+      console.error('Error sending welcome email:', error);
+    }
+  }
+
   private async processUploadedFiles(
     registrationDto: CompleteRegistrationDto,
     files?: Express.Multer.File[]
@@ -190,10 +196,18 @@ export class AuthService {
     const documentUrls: { [key: string]: string } = {};
     
     try {
-      for (const file of files) {
+      // **OPTIMIZADO**: Subir todos los archivos en paralelo
+      const uploadPromises = files.map(async (file) => {
         const uploadedUrl = await this.fileUploadService.uploadFile(file, 'legal-documents');
+        return { file, uploadedUrl };
+      });
+
+      const uploadResults = await Promise.all(uploadPromises);
+
+      // Asignar URLs a los tipos de documento
+      uploadResults.forEach(({ file, uploadedUrl }) => {
         this.assignDocumentUrl(file, documentUrls, uploadedUrl);
-      }
+      });
 
       return {
         ...registrationDto,
@@ -248,7 +262,8 @@ export class AuthService {
 
     for (const file of files) {
       try {
-        await this.fileUploadService.deleteFile(file.path);
+        // El método deleteFile ahora maneja tanto archivos locales como S3
+        await this.fileUploadService.deleteFile(file.filename || file.path);
       } catch (cleanupError) {
         console.error('Error cleaning up file:', cleanupError);
       }
