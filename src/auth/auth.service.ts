@@ -13,6 +13,7 @@ import {
   CreateUserDto, 
   LoginDto, 
   AuthResponseDto, 
+  AuthMeResponseDto,
   ForgotPasswordDto, 
   VerifyOtpDto, 
   ResetPasswordDto 
@@ -100,6 +101,30 @@ export class AuthService {
     }
 
     return user;
+  }
+
+  async getMe(userId: string): Promise<AuthMeResponseDto> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId, isActive: true },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Usuario no encontrado o cuenta inactiva');
+    }
+
+    return {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      fullName: user.fullName,
+      role: user.role,
+      phone: user.phone ?? null,
+      profileImage: user.profileImage ?? null,
+      companyId: user.companyId ?? null,
+      isActive: user.isActive,
+      createdAt: user.createdAt,
+    };
   }
 
   private generateAuthResponse(user: User): AuthResponseDto {

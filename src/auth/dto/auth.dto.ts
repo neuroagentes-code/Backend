@@ -89,6 +89,78 @@ export class AuthResponseDto {
   };
 }
 
+export class AuthMeResponseDto {
+  @ApiProperty({
+    description: 'ID único del usuario',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  id: string;
+
+  @ApiProperty({
+    description: 'Correo electrónico del usuario',
+    example: 'usuario@neuroagentes.co',
+  })
+  email: string;
+
+  @ApiProperty({
+    description: 'Nombre del usuario',
+    example: 'Juan',
+  })
+  firstName: string;
+
+  @ApiProperty({
+    description: 'Apellido del usuario',
+    example: 'Pérez',
+  })
+  lastName: string;
+
+  @ApiProperty({
+    description: 'Nombre completo del usuario',
+    example: 'Juan Pérez',
+  })
+  fullName: string;
+
+  @ApiProperty({
+    description: 'Rol del usuario en el sistema',
+    enum: UserRole,
+    example: UserRole.USER,
+  })
+  role: UserRole;
+
+  @ApiProperty({
+    description: 'Teléfono del usuario',
+    example: '+57 300 1234567',
+    nullable: true,
+  })
+  phone: string | null;
+
+  @ApiProperty({
+    description: 'Imagen de perfil del usuario',
+    example: 'https://storage.example.com/profile.jpg',
+    nullable: true,
+  })
+  profileImage: string | null;
+
+  @ApiProperty({
+    description: 'ID de la empresa a la que pertenece el usuario',
+    example: 'abc12345-...',
+    nullable: true,
+  })
+  companyId: string | null;
+
+  @ApiProperty({
+    description: 'Indica si la cuenta del usuario está activa',
+    example: true,
+  })
+  isActive: boolean;
+
+  @ApiProperty({
+    description: 'Fecha de creación de la cuenta',
+    example: '2024-01-15T10:30:00Z',
+  })
+  createdAt: Date;
+}
+
 export class LoginErrorDto {
   @ApiProperty({
     description: 'HTTP status code',
