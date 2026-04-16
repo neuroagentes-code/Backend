@@ -15,9 +15,10 @@ import { AuthService } from '../auth/auth.service';
 import { CompleteRegistrationDto } from '../companies/dto/create-company.dto';
 import { FileUploadService } from '../common/services/file-upload.service';
 import { Public } from '../auth/decorators/auth.decorators';
+import { join } from 'node:path';
 
 // Configuración de multer para validar archivos
-const UPLOADS_TEMP_DIR = '/usr/src/app/uploads/temp';
+const UPLOADS_TEMP_DIR = join(process.cwd(), 'uploads', 'temp');
 
 const multerOptions = {
   storage: diskStorage({

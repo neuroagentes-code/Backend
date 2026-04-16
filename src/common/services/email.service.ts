@@ -10,10 +10,11 @@ export class EmailService {
   private readonly transporter: nodemailer.Transporter;
 
   constructor() {
+    const port = Number.parseInt(process.env.SMTP_PORT) || 465;
     this.transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: Number.parseInt(process.env.SMTP_PORT) || 587,
-      secure: false,
+      port,
+      secure: port === 465, // true para 465 (SSL), false para 587 (TLS)
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
