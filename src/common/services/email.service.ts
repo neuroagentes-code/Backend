@@ -10,17 +10,15 @@ export class EmailService {
   private readonly transporter: nodemailer.Transporter;
 
   constructor() {
-    const port = Number.parseInt(process.env.SMTP_PORT) || 465;
     this.transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port,
-      secure: port === 465, // true para 465 (SSL), false para 587 (TLS)
-      family: 4, // Forzar IPv4 - Railway no soporta IPv6
+      port: Number.parseInt(process.env.SMTP_PORT) || 587,
+      secure: false,
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
-    } as any);
+    });
   }
 
   async sendWelcomeEmail(
