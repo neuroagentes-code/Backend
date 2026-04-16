@@ -15,11 +15,14 @@ export class EmailService {
       host: process.env.SMTP_HOST || 'smtp.gmail.com',
       port,
       secure: port === 465, // true para 465 (SSL), false para 587 (TLS)
+      tls: {
+        family: 4, // Forzar IPv4, Railway no soporta IPv6
+      },
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
-    });
+    } as nodemailer.TransportOptions);
   }
 
   async sendWelcomeEmail(
