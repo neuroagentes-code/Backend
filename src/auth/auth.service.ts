@@ -164,11 +164,9 @@ export class AuthService {
     }
 
     try {
-      // **OPTIMIZADO**: Procesar archivos y crear empresa en paralelo
-      const [updatedRegistrationDto, company] = await Promise.all([
-        this.processUploadedFiles(registrationDto, files),
-        this.companiesService.create(registrationDto.company)
-      ]);
+      // Primero subir archivos, luego crear la empresa con las URLs ya incluidas
+      const updatedRegistrationDto = await this.processUploadedFiles(registrationDto, files);
+      const company = await this.companiesService.create(updatedRegistrationDto.company);
 
       // Crear el usuario asociado a la empresa
       const user = this.userRepository.create({
@@ -186,9 +184,16 @@ export class AuthService {
       // **OPTIMIZADO**: Enviar email de forma asíncrona (no bloquear respuesta)
       this.sendWelcomeEmailAsync(savedUser.email, company.name, savedUser.fullName);
 
+      const documentUrls = {
+        chamberOfCommerceUrl: updatedRegistrationDto.company?.['chamberOfCommerceUrl'],
+        rutUrl: updatedRegistrationDto.company?.['rutUrl'],
+        legalRepresentativeIdUrl: updatedRegistrationDto.company?.['legalRepresentativeIdUrl'],
+      };
+
       return {
         message: 'Registro completado con éxito. Bienvenido a NeuroAgentes.',
-      };
+        documentUrls,
+      } as any;
     } catch (error) {
       console.error('Error during complete registration:', error);
       

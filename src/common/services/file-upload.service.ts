@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as AWS from 'aws-sdk';
+import * as fs from 'node:fs';
 import { S3Config } from '../../config/configuration.interface';
 
 @Injectable()
@@ -86,11 +87,17 @@ export class FileUploadService {
     const sanitizedFileName = file.originalname.replace(/[^a-zA-Z0-9\.-]/g, '_');
     const fileName = `${folder}/${timestamp}-${randomString}-${sanitizedFileName}`;
 
+    // diskStorage no llena file.buffer; leer del disco si es necesario
+    const body: Buffer | fs.ReadStream = file.buffer
+      ? file.buffer
+      : fs.createReadStream(file.path);
+
     const uploadParams = {
       Bucket: this.s3Config.bucketName,
       Key: fileName,
-      Body: file.buffer,
+      Body: body,
       ContentType: file.mimetype,
+      ACL: 'public-read',
       
       // **OPTIMIZADO**: Configuraciones para velocidad y rendimiento
       ServerSideEncryption: 'AES256',
