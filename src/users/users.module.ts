@@ -3,13 +3,15 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
 import { User } from '../auth/entities/user.entity';
+import { RolePermission } from '../auth/entities/role-permission.entity';
 import { PermissionsGuard } from './guards/permissions.guard';
 import { FileUploadService } from '../common/services/file-upload.service';
 import { EmailService } from '../common/services/email.service';
+import { RolePermissionsService } from '../common/services/role-permissions.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User, RolePermission]),
   ],
   controllers: [UsersController],
   providers: [
@@ -17,7 +19,8 @@ import { EmailService } from '../common/services/email.service';
     PermissionsGuard,
     FileUploadService,
     EmailService,
+    RolePermissionsService,
   ],
-  exports: [UsersService, PermissionsGuard, FileUploadService],
+  exports: [UsersService, PermissionsGuard, FileUploadService, RolePermissionsService],
 })
 export class UsersModule {}

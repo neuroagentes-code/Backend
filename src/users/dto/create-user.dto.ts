@@ -1,62 +1,5 @@
-import { IsEmail, IsString, IsOptional, IsEnum, IsObject, ValidateNested, IsBoolean } from 'class-validator';
-import { Type } from 'class-transformer';
-import { UserRole, UserArea, UserPermissions } from '../../auth/entities/user.entity';
-
-export class PermissionsDto {
-  @IsOptional()
-  @IsObject()
-  agents?: {
-    view: boolean;
-    create: boolean;
-    edit: boolean;
-    delete: boolean;
-  };
-
-  @IsOptional()
-  @IsObject()
-  integrations?: {
-    view: boolean;
-    create: boolean;
-    edit: boolean;
-    delete: boolean;
-  };
-
-  @IsOptional()
-  @IsObject()
-  channels?: {
-    view: boolean;
-    create: boolean;
-    edit: boolean;
-    delete: boolean;
-  };
-
-  @IsOptional()
-  @IsObject()
-  users?: {
-    view: boolean;
-    create: boolean;
-    edit: boolean;
-    delete: boolean;
-  };
-
-  @IsOptional()
-  @IsObject()
-  subscriptions?: {
-    view: boolean;
-    create: boolean;
-    edit: boolean;
-    delete: boolean;
-  };
-
-  @IsOptional()
-  @IsObject()
-  profile?: {
-    view: boolean;
-    create: boolean;
-    edit: boolean;
-    delete: boolean;
-  };
-}
+import { IsEmail, IsString, IsOptional, IsEnum, IsBoolean } from 'class-validator';
+import { UserRole, UserArea } from '../../auth/entities/user.entity';
 
 export class CreateUserDto {
   @IsEmail({}, { message: 'El correo electrónico debe ser válido' })
@@ -86,11 +29,6 @@ export class CreateUserDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean = true;
-
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => PermissionsDto)
-  permissions?: UserPermissions;
 
   @IsOptional()
   @IsString()

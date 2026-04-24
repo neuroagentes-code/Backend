@@ -24,7 +24,6 @@ import { JwtAuthGuard } from '../auth/guards/auth.guards';
 import { PermissionsGuard } from './guards/permissions.guard';
 import { RequireUserPermission } from './decorators/permissions.decorator';
 import { PaginatedResponse } from '../common/dto/paginated-response.dto';
-import { UserPermissions } from '../auth/entities/user.entity';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -132,22 +131,6 @@ export class UsersController {
   @ApiResponse({ status: 404, description: 'Usuario no encontrado.' })
   async toggleStatus(@Param('id', ParseUUIDPipe) id: string): Promise<UserResponseDto> {
     return this.usersService.toggleStatus(id);
-  }
-
-  @Patch(':id/permissions')
-  @RequireUserPermission('edit')
-  @ApiOperation({ summary: 'Actualizar permisos del usuario' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Permisos actualizados exitosamente.',
-    type: UserResponseDto 
-  })
-  @ApiResponse({ status: 404, description: 'Usuario no encontrado.' })
-  async updatePermissions(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() permissions: UserPermissions,
-  ): Promise<UserResponseDto> {
-    return this.usersService.updatePermissions(id, permissions);
   }
 
   @Delete(':id')

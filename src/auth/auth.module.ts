@@ -6,15 +6,17 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { User } from './entities/user.entity';
+import { RolePermission } from './entities/role-permission.entity';
 import { LocalStrategy } from './strategies/local.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { CompaniesModule } from '../companies/companies.module';
 import { EmailService } from '../common/services/email.service';
 import { FileUploadService } from '../common/services/file-upload.service';
+import { RolePermissionsService } from '../common/services/role-permissions.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User, RolePermission]),
     CompaniesModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
@@ -29,7 +31,7 @@ import { FileUploadService } from '../common/services/file-upload.service';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, LocalStrategy, JwtStrategy, EmailService, FileUploadService],
+  providers: [AuthService, LocalStrategy, JwtStrategy, EmailService, FileUploadService, RolePermissionsService],
   exports: [AuthService, JwtModule],
 })
 export class AuthModule {}

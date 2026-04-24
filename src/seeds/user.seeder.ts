@@ -24,14 +24,6 @@ export class UserSeeder {
       role: UserRole.SUPER_ADMIN,
       area: UserArea.OPERATIONS,
       isActive: true,
-      permissions: {
-        agents: { view: true, create: true, edit: true, delete: true },
-        integrations: { view: true, create: true, edit: true, delete: true },
-        channels: { view: true, create: true, edit: true, delete: true },
-        users: { view: true, create: true, edit: true, delete: true },
-        subscriptions: { view: true, create: true, edit: true, delete: true },
-        profile: { view: true, create: true, edit: true, delete: true },
-      },
     });
 
     // Crear Admin
@@ -43,14 +35,6 @@ export class UserSeeder {
       role: UserRole.ADMIN,
       area: UserArea.COMMERCIAL,
       isActive: true,
-      permissions: {
-        agents: { view: true, create: true, edit: true, delete: false },
-        integrations: { view: true, create: true, edit: true, delete: false },
-        channels: { view: true, create: true, edit: true, delete: false },
-        users: { view: true, create: true, edit: true, delete: false },
-        subscriptions: { view: true, create: false, edit: false, delete: false },
-        profile: { view: true, create: false, edit: true, delete: false },
-      },
     });
 
     // Crear Manager
@@ -62,14 +46,6 @@ export class UserSeeder {
       role: UserRole.MANAGER,
       area: UserArea.COMMERCIAL,
       isActive: true,
-      permissions: {
-        agents: { view: true, create: true, edit: true, delete: false },
-        integrations: { view: true, create: false, edit: false, delete: false },
-        channels: { view: true, create: true, edit: true, delete: false },
-        users: { view: true, create: false, edit: false, delete: false },
-        subscriptions: { view: true, create: false, edit: false, delete: false },
-        profile: { view: true, create: false, edit: true, delete: false },
-      },
     });
 
     // Crear Usuario Regular
@@ -81,14 +57,6 @@ export class UserSeeder {
       role: UserRole.USER,
       area: UserArea.CUSTOMER_SERVICE,
       isActive: true,
-      permissions: {
-        agents: { view: false, create: false, edit: false, delete: false },
-        integrations: { view: false, create: false, edit: false, delete: false },
-        channels: { view: false, create: false, edit: false, delete: false },
-        users: { view: false, create: false, edit: false, delete: false },
-        subscriptions: { view: false, create: false, edit: false, delete: false },
-        profile: { view: true, create: false, edit: true, delete: false },
-      },
     });
 
     await userRepository.save([superAdmin, admin, manager, user]);

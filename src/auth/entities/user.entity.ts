@@ -20,45 +20,6 @@ export enum UserArea {
   HR = 'hr',
 }
 
-export interface UserPermissions {
-  agents: {
-    view: boolean;
-    create: boolean;
-    edit: boolean;
-    delete: boolean;
-  };
-  integrations: {
-    view: boolean;
-    create: boolean;
-    edit: boolean;
-    delete: boolean;
-  };
-  channels: {
-    view: boolean;
-    create: boolean;
-    edit: boolean;
-    delete: boolean;
-  };
-  users: {
-    view: boolean;
-    create: boolean;
-    edit: boolean;
-    delete: boolean;
-  };
-  subscriptions: {
-    view: boolean;
-    create: boolean;
-    edit: boolean;
-    delete: boolean;
-  };
-  profile: {
-    view: boolean;
-    create: boolean;
-    edit: boolean;
-    delete: boolean;
-  };
-}
-
 @Entity('users')
 export class User extends BaseEntity {
   @Column({ unique: true })
@@ -112,15 +73,6 @@ export class User extends BaseEntity {
   @Column({ nullable: true })
   otpExpiry: Date;
 
-  @Column({ 
-    type: 'jsonb', 
-    nullable: true,
-    default: () => "'{}'" 
-  })
-  permissions: UserPermissions;
-
-  @Column({ nullable: true })
-  deletedAt: Date;
 
   // Relación con empresa
   @ManyToOne(() => Company, company => company.users, { nullable: true })

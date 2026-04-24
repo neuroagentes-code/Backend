@@ -1,7 +1,5 @@
-import { IsEmail, IsString, IsOptional, IsEnum, ValidateNested, IsBoolean } from 'class-validator';
-import { Type } from 'class-transformer';
-import { UserRole, UserArea, UserPermissions } from '../../auth/entities/user.entity';
-import { PermissionsDto } from './create-user.dto';
+import { IsString, IsOptional, IsEnum, IsBoolean, IsEmail } from 'class-validator';
+import { UserRole, UserArea } from '../../auth/entities/user.entity';
 
 export class UpdateUserDto {
   @IsOptional()
@@ -35,11 +33,6 @@ export class UpdateUserDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
-
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => PermissionsDto)
-  permissions?: UserPermissions;
 
   @IsOptional()
   @IsString()

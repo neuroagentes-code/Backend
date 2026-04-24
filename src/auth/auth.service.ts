@@ -8,7 +8,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan } from 'typeorm';
-import { User } from './entities/user.entity';
+import { User, UserRole } from './entities/user.entity';
 import { 
   CreateUserDto, 
   LoginDto, 
@@ -24,6 +24,7 @@ import { Company } from '../companies/entities/company.entity';
 import { CompaniesService } from '../companies/companies.service';
 import { EmailService } from '../common/services/email.service';
 import { FileUploadService } from '../common/services/file-upload.service';
+import { RolePermissionsService } from '../common/services/role-permissions.service';
 
 @Injectable()
 export class AuthService {
@@ -34,6 +35,7 @@ export class AuthService {
     private readonly companiesService: CompaniesService,
     private readonly emailService: EmailService,
     private readonly fileUploadService: FileUploadService,
+    private readonly rolePermissionsService: RolePermissionsService,
   ) {}
 
   async register(createUserDto: CreateUserDto): Promise<AuthResponseDto> {
@@ -168,14 +170,14 @@ export class AuthService {
       const updatedRegistrationDto = await this.processUploadedFiles(registrationDto, files);
       const company = await this.companiesService.create(updatedRegistrationDto.company);
 
-      // Crear el usuario asociado a la empresa
+      // Crear el usuario asociado a la empresa con rol ADMIN
       const user = this.userRepository.create({
         email: updatedRegistrationDto.email.toLowerCase().trim(),
         password: updatedRegistrationDto.password,
         firstName: updatedRegistrationDto.firstName,
         lastName: updatedRegistrationDto.lastName,
         company: company,
-        role: 'user' as any,
+        role: UserRole.ADMIN, // ✅ Usuario admin - permisos vienen de role_permissions
         isActive: true,
       });
 

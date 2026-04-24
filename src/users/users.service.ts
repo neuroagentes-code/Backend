@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, FindOptionsWhere, IsNull } from 'typeorm';
-import { User, UserPermissions, UserRole } from '../auth/entities/user.entity';
+import { User, UserRole } from '../auth/entities/user.entity';
+import { UserPermissions } from '../common/interfaces/permissions.interface';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { GetUsersFilterDto } from './dto/get-users-filter.dto';
@@ -9,6 +10,7 @@ import { UserResponseDto } from './dto/user-response.dto';
 import { PaginatedResponse } from '../common/dto/paginated-response.dto';
 import { FileUploadService } from '../common/services/file-upload.service';
 import { EmailService } from '../common/services/email.service';
+import { RolePermissionsService } from '../common/services/role-permissions.service';
 import * as crypto from 'node:crypto';
 import * as bcrypt from 'bcryptjs';
 
@@ -19,6 +21,7 @@ export class UsersService {
     private readonly userRepository: Repository<User>,
     private readonly fileUploadService: FileUploadService,
     private readonly emailService: EmailService,
+    private readonly rolePermissionsService: RolePermissionsService,
   ) {}
 
   async create(createUserDto: CreateUserDto, profileImageFile?: Express.Multer.File): Promise<UserResponseDto> {
@@ -43,14 +46,11 @@ export class UsersService {
     // Generar contraseña temporal
     const temporaryPassword = crypto.randomBytes(8).toString('hex');
 
-    // Establecer permisos por defecto según el rol
-    const defaultPermissions = this.getDefaultPermissions(createUserDto.role);
-
     const user = this.userRepository.create({
       ...createUserDto,
       password: temporaryPassword,
       profileImage: profileImageUrl,
-      permissions: { ...defaultPermissions, ...createUserDto.permissions },
+      // ✅ NUEVO: Los permisos vienen automáticamente del rol via role_permissions table
     });
 
     const savedUser = await this.userRepository.save(user);
@@ -152,11 +152,6 @@ export class UsersService {
       updateUserDto.password = await bcrypt.hash(updateUserDto.password, 12);
     }
 
-    // Merge permissions
-    if (updateUserDto.permissions) {
-      updateUserDto.permissions = { ...user.permissions, ...updateUserDto.permissions };
-    }
-
     await this.userRepository.update(id, updateUserDto);
     
     const updatedUser = await this.userRepository.findOne({
@@ -196,21 +191,6 @@ export class UsersService {
     await this.userRepository.save(user);
   }
 
-  async updatePermissions(id: string, permissions: UserPermissions): Promise<UserResponseDto> {
-    const user = await this.userRepository.findOne({
-      where: { id, deletedAt: IsNull() }
-    });
-
-    if (!user) {
-      throw new NotFoundException('Usuario no encontrado');
-    }
-
-    user.permissions = { ...user.permissions, ...permissions };
-    const updatedUser = await this.userRepository.save(user);
-
-    return this.createUserResponseWithImageUrl(updatedUser);
-  }
-
   private async buildPaginatedResponse(
     users: User[], 
     total: number, 
@@ -231,7 +211,7 @@ export class UsersService {
   }
 
   /**
-   * Crea un UserResponseDto con la URL firmada de la imagen de perfil
+   * Crea un UserResponseDto con la URL firmada de la imagen de perfil y permisos por rol
    */
   private async createUserResponseWithImageUrl(user: User): Promise<UserResponseDto> {
     const userDto = new UserResponseDto(user);
@@ -250,10 +230,30 @@ export class UsersService {
         userDto.profileImageUrl = undefined;
       }
     }
+
+    // ✅ NUEVO: Obtener permisos basados en el rol del usuario
+    try {
+      userDto.permissions = await this.rolePermissionsService.getPermissionsByRole(user.role);
+    } catch (error) {
+      console.error(`Error getting role permissions for user ${user.id} with role ${user.role}:`, error);
+      // En caso de error, mantener permisos vacíos por seguridad
+      userDto.permissions = {
+        agents: { view: false, create: false, edit: false, delete: false },
+        integrations: { view: false, create: false, edit: false, delete: false },
+        channels: { view: false, create: false, edit: false, delete: false },
+        users: { view: false, create: false, edit: false, delete: false },
+        subscriptions: { view: false, create: false, edit: false, delete: false },
+        profile: { view: true, create: false, edit: true, delete: false },
+      };
+    }
     
     return userDto;
   }
 
+  /**
+   * @deprecated Use RolePermissionsService.getPermissionsByRole() instead
+   * Esta función se mantiene solo para compatibilidad hacia atrás
+   */
   private getDefaultPermissions(role: UserRole): UserPermissions {
     const basePermissions: UserPermissions = {
       agents: { view: false, create: false, edit: false, delete: false },
