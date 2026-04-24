@@ -6,10 +6,10 @@ import { S3Config } from '../../config/configuration.interface';
 
 @Injectable()
 export class FileUploadService {
-  private s3: AWS.S3;
-  private s3Config: S3Config;
+  private readonly s3: AWS.S3;
+  private readonly s3Config: S3Config;
 
-  constructor(private configService: ConfigService) {
+  constructor(private readonly configService: ConfigService) {
     // Obtener configuración de S3
     this.s3Config = this.configService.get<S3Config>('aws');
     
@@ -84,7 +84,7 @@ export class FileUploadService {
     // Generar nombre único para el archivo
     const timestamp = Date.now();
     const randomString = Math.random().toString(36).substring(2);
-    const sanitizedFileName = file.originalname.replace(/[^a-zA-Z0-9\.-]/g, '_');
+    const sanitizedFileName = file.originalname.replaceAll(/[^a-zA-Z0-9.-]/g, '_');
     const fileName = `${folder}/${timestamp}-${randomString}-${sanitizedFileName}`;
 
     // diskStorage no llena file.buffer; leer del disco si es necesario
@@ -97,7 +97,7 @@ export class FileUploadService {
       Key: fileName,
       Body: body,
       ContentType: file.mimetype,
-      ACL: 'public-read',
+      // Eliminar ACL para Railway Storage Buckets (son privados por defecto)
       
       // **OPTIMIZADO**: Configuraciones para velocidad y rendimiento
       ServerSideEncryption: 'AES256',
@@ -111,7 +111,10 @@ export class FileUploadService {
       
       // **OPTIMIZADO**: Headers de cache para CDN
       CacheControl: 'max-age=31536000', // 1 año
-      ContentDisposition: `attachment; filename="${file.originalname}"`,
+      // Para imágenes, usar inline para mostrar en navegador, attachment para descargar
+      ContentDisposition: file.mimetype.startsWith('image/') 
+        ? 'inline'  // Mostrar imagen en navegador
+        : `attachment; filename="${file.originalname}"`, // Descargar otros archivos,
     };
 
     // **OPTIMIZADO**: Usar upload optimizado con configuración de velocidad
@@ -121,9 +124,11 @@ export class FileUploadService {
       leavePartsOnError: false,
     };
 
-    const uploadResult = await this.s3.upload(uploadParams, uploadOptions).promise();
+    await this.s3.upload(uploadParams, uploadOptions).promise();
 
-    return uploadResult.Location;
+    // Para Railway Storage Buckets, devolver la key en lugar de la Location
+    // La URL se generará bajo demanda con presigned URLs
+    return fileName;
   }
 
 
@@ -137,11 +142,14 @@ export class FileUploadService {
     }
   }
 
-  private async deleteFromS3(fileUrl: string): Promise<void> {
+  private async deleteFromS3(fileKey: string): Promise<void> {
     try {
-      // Extraer la key del archivo de S3
-      const url = new URL(fileUrl);
-      const key = url.pathname.substring(1); // Remover el primer '/'
+      // Si es una URL completa, extraer la key
+      let key = fileKey;
+      if (fileKey.startsWith('http')) {
+        const url = new URL(fileKey);
+        key = url.pathname.substring(1); // Remover el primer '/'
+      }
 
       await this.s3.deleteObject({
         Bucket: this.s3Config.bucketName,
@@ -156,12 +164,18 @@ export class FileUploadService {
 
 
   /**
-   * Genera una URL firmada para acceso temporal a un archivo en S3
+   * Genera una URL firmada para acceso temporal a un archivo en Railway Storage Bucket
+   * @param fileKey - La key del archivo en S3 (sin prefijos de URL)
+   * @param expiresIn - Tiempo de expiración en segundos (default: 1 hora)
    */
-  async getSignedUrl(fileUrl: string, expiresIn: number = 3600): Promise<string> {
+  async getSignedUrl(fileKey: string, expiresIn: number = 3600): Promise<string> {
     try {
-      const url = new URL(fileUrl);
-      const key = url.pathname.substring(1);
+      // Si fileKey es una URL completa, extraer solo la key
+      let key = fileKey;
+      if (fileKey.startsWith('http')) {
+        const url = new URL(fileKey);
+        key = url.pathname.substring(1);
+      }
 
       const signedUrl = this.s3.getSignedUrl('getObject', {
         Bucket: this.s3Config.bucketName,
@@ -173,6 +187,40 @@ export class FileUploadService {
     } catch (error) {
       console.error('Error generating signed URL:', error);
       throw new BadRequestException('Error generando URL de acceso al archivo');
+    }
+  }
+
+  /**
+   * Genera una URL firmada para subir un archivo directamente desde el frontend
+   * Útil para subidas grandes que no deben pasar por el backend
+   */
+  async getUploadPresignedUrl(
+    fileName: string, 
+    contentType: string,
+    folder: string = 'documents',
+    expiresIn: number = 3600
+  ): Promise<{ url: string; key: string }> {
+    try {
+      // Generar nombre único para el archivo
+      const timestamp = Date.now();
+      const randomString = Math.random().toString(36).substring(2);
+      const sanitizedFileName = fileName.replaceAll(/[^a-zA-Z0-9.-]/g, '_');
+      const key = `${folder}/${timestamp}-${randomString}-${sanitizedFileName}`;
+
+      const signedUrl = this.s3.getSignedUrl('putObject', {
+        Bucket: this.s3Config.bucketName,
+        Key: key,
+        ContentType: contentType,
+        Expires: expiresIn,
+      });
+
+      return {
+        url: signedUrl,
+        key: key
+      };
+    } catch (error) {
+      console.error('Error generating upload presigned URL:', error);
+      throw new BadRequestException('Error generando URL para subida de archivo');
     }
   }
 }

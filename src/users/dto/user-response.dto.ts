@@ -24,6 +24,9 @@ export class UserResponseDto {
   profileImage?: string;
 
   @Expose()
+  profileImageUrl?: string; // URL firmada lista para usar
+
+  @Expose()
   role: string;
 
   @Expose()

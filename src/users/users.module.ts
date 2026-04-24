@@ -18,6 +18,6 @@ import { EmailService } from '../common/services/email.service';
     FileUploadService,
     EmailService,
   ],
-  exports: [UsersService, PermissionsGuard],
+  exports: [UsersService, PermissionsGuard, FileUploadService],
 })
 export class UsersModule {}

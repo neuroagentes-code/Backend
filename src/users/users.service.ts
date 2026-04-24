@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, FindOptionsWhere, IsNull } from 'typeorm';
 import { User, UserPermissions, UserRole } from '../auth/entities/user.entity';
@@ -9,7 +9,7 @@ import { UserResponseDto } from './dto/user-response.dto';
 import { PaginatedResponse } from '../common/dto/paginated-response.dto';
 import { FileUploadService } from '../common/services/file-upload.service';
 import { EmailService } from '../common/services/email.service';
-import * as crypto from 'crypto';
+import * as crypto from 'node:crypto';
 import * as bcrypt from 'bcryptjs';
 
 @Injectable()
@@ -58,7 +58,7 @@ export class UsersService {
     // Enviar email con contraseña temporal
     await this.sendWelcomeEmail(savedUser, temporaryPassword);
 
-    return new UserResponseDto(savedUser);
+    return this.createUserResponseWithImageUrl(savedUser);
   }
 
   async findAll(filters: GetUsersFilterDto): Promise<PaginatedResponse<UserResponseDto>> {
@@ -86,7 +86,7 @@ export class UsersService {
         this.userRepository.count({ where: searchConditions })
       ]);
 
-      return this.buildPaginatedResponse(users, total, page, limit);
+      return await this.buildPaginatedResponse(users, total, page, limit);
     }
 
     // Aplicar filtros específicos
@@ -103,7 +103,7 @@ export class UsersService {
       order: { createdAt: 'DESC' }
     });
 
-    return this.buildPaginatedResponse(users, total, page, limit);
+    return await this.buildPaginatedResponse(users, total, page, limit);
   }
 
   async findOne(id: string): Promise<UserResponseDto> {
@@ -116,7 +116,7 @@ export class UsersService {
       throw new NotFoundException('Usuario no encontrado');
     }
 
-    return new UserResponseDto(user);
+    return this.createUserResponseWithImageUrl(user);
   }
 
   async update(id: string, updateUserDto: UpdateUserDto, profileImageFile?: Express.Multer.File): Promise<UserResponseDto> {
@@ -164,7 +164,7 @@ export class UsersService {
       relations: ['company']
     });
 
-    return new UserResponseDto(updatedUser!);
+    return this.createUserResponseWithImageUrl(updatedUser);
   }
 
   async toggleStatus(id: string): Promise<UserResponseDto> {
@@ -179,7 +179,7 @@ export class UsersService {
     user.isActive = !user.isActive;
     const updatedUser = await this.userRepository.save(user);
 
-    return new UserResponseDto(updatedUser);
+    return this.createUserResponseWithImageUrl(updatedUser);
   }
 
   async remove(id: string): Promise<void> {
@@ -208,16 +208,19 @@ export class UsersService {
     user.permissions = { ...user.permissions, ...permissions };
     const updatedUser = await this.userRepository.save(user);
 
-    return new UserResponseDto(updatedUser);
+    return this.createUserResponseWithImageUrl(updatedUser);
   }
 
-  private buildPaginatedResponse(
+  private async buildPaginatedResponse(
     users: User[], 
     total: number, 
     page: number, 
     limit: number
-  ): PaginatedResponse<UserResponseDto> {
-    const userDtos = users.map(user => new UserResponseDto(user));
+  ): Promise<PaginatedResponse<UserResponseDto>> {
+    // Generar URLs firmadas para todos los usuarios con imágenes en paralelo
+    const userDtos = await Promise.all(
+      users.map(user => this.createUserResponseWithImageUrl(user))
+    );
     
     return new PaginatedResponse(
       userDtos,
@@ -225,6 +228,30 @@ export class UsersService {
       page,
       limit
     );
+  }
+
+  /**
+   * Crea un UserResponseDto con la URL firmada de la imagen de perfil
+   */
+  private async createUserResponseWithImageUrl(user: User): Promise<UserResponseDto> {
+    const userDto = new UserResponseDto(user);
+    
+    // Si el usuario tiene imagen de perfil, generar URL firmada
+    if (user.profileImage) {
+      try {
+        // Generar URL firmada válida por 24 horas
+        userDto.profileImageUrl = await this.fileUploadService.getSignedUrl(
+          user.profileImage, 
+          86400 // 24 horas en segundos
+        );
+      } catch (error) {
+        console.error(`Error generating signed URL for user ${user.id}:`, error);
+        // Si hay error, dejar profileImageUrl como undefined
+        userDto.profileImageUrl = undefined;
+      }
+    }
+    
+    return userDto;
   }
 
   private getDefaultPermissions(role: UserRole): UserPermissions {

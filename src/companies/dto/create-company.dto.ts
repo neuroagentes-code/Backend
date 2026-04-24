@@ -1,6 +1,7 @@
 import { IsString, IsNotEmpty, IsOptional, IsBoolean, IsEmail, ValidateNested, registerDecorator, ValidationOptions, ValidationArguments } from 'class-validator';
-import { Type, Transform } from 'class-transformer';
+import { Type, Transform, Expose } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
+import { Company } from '../entities/company.entity';
 
 // Validador personalizado para términos aceptados
 function IsTrue(validationOptions?: ValidationOptions) {
@@ -128,4 +129,73 @@ export class CompleteRegistrationDto {
   @IsOptional()
   @IsString()
   position?: string;
+}
+
+// DTO para respuestas de Company con URLs firmadas
+export class CompanyResponseDto {
+  @Expose()
+  id: string;
+
+  @Expose()
+  name: string;
+
+  @Expose()
+  country: string;
+
+  @Expose()
+  department: string;
+
+  @Expose()
+  city: string;
+
+  @Expose()
+  address?: string;
+
+  @Expose()
+  phone?: string;
+
+  @Expose()
+  website?: string;
+
+  @Expose()
+  description?: string;
+
+  @Expose()
+  legalRepresentativeName?: string;
+
+  @Expose()
+  legalRepresentativeId?: string;
+
+  @Expose()
+  isActive: boolean;
+
+  // URLs originales (file keys)
+  @Expose()
+  chamberOfCommerceUrl?: string;
+
+  @Expose()
+  rutUrl?: string;
+
+  @Expose()
+  legalRepresentativeIdUrl?: string;
+
+  // URLs firmadas listas para usar
+  @Expose()
+  chamberOfCommerceSignedUrl?: string;
+
+  @Expose()
+  rutSignedUrl?: string;
+
+  @Expose()
+  legalRepresentativeIdSignedUrl?: string;
+
+  @Expose()
+  createdAt: Date;
+
+  @Expose()
+  updatedAt: Date;
+
+  constructor(partial: Partial<Company>) {
+    Object.assign(this, partial);
+  }
 }

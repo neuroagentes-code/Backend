@@ -31,13 +31,16 @@ import { UserPermissions } from '../auth/entities/user.entity';
 @Controller('users')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+  ) {}
 
   @Post()
   @RequireUserPermission('create')
   @UseInterceptors(FileInterceptor('profileImage', {
     fileFilter: (req, file, callback) => {
-      if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
+      const imageRegex = /\.(jpg|jpeg|png|gif)$/;
+      if (!imageRegex.exec(file.originalname)) {
         return callback(new BadRequestException('Solo se permiten archivos de imagen'), false);
       }
       callback(null, true);
@@ -91,7 +94,8 @@ export class UsersController {
   @RequireUserPermission('edit')
   @UseInterceptors(FileInterceptor('profileImage', {
     fileFilter: (req, file, callback) => {
-      if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
+      const imageRegex = /\.(jpg|jpeg|png|gif)$/;
+      if (!imageRegex.exec(file.originalname)) {
         return callback(new BadRequestException('Solo se permiten archivos de imagen'), false);
       }
       callback(null, true);

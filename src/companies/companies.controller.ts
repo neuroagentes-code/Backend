@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Param, Put, Delete, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { CompaniesService } from './companies.service';
-import { CreateCompanyDto } from './dto/create-company.dto';
+import { CreateCompanyDto, CompanyResponseDto } from './dto/create-company.dto';
 import { Company } from './entities/company.entity';
 import { JwtAuthGuard } from '../auth/guards/auth.guards';
 
@@ -21,8 +21,8 @@ export class CompaniesController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Obtener todas las empresas' })
-  @ApiResponse({ status: 200, description: 'Lista de empresas', type: [Company] })
-  async findAll(): Promise<Company[]> {
+  @ApiResponse({ status: 200, description: 'Lista de empresas con URLs firmadas', type: [CompanyResponseDto] })
+  async findAll(): Promise<CompanyResponseDto[]> {
     return this.companiesService.findAll();
   }
 
@@ -30,8 +30,8 @@ export class CompaniesController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Obtener empresa por ID' })
-  @ApiResponse({ status: 200, description: 'Empresa encontrada', type: Company })
-  async findOne(@Param('id') id: string): Promise<Company> {
+  @ApiResponse({ status: 200, description: 'Empresa encontrada con URLs firmadas', type: CompanyResponseDto })
+  async findOne(@Param('id') id: string): Promise<CompanyResponseDto> {
     return this.companiesService.findOne(id);
   }
 
@@ -39,11 +39,11 @@ export class CompaniesController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Actualizar empresa' })
-  @ApiResponse({ status: 200, description: 'Empresa actualizada', type: Company })
+  @ApiResponse({ status: 200, description: 'Empresa actualizada con URLs firmadas', type: CompanyResponseDto })
   async update(
     @Param('id') id: string,
     @Body() updateCompanyDto: Partial<CreateCompanyDto>,
-  ): Promise<Company> {
+  ): Promise<CompanyResponseDto> {
     return this.companiesService.update(id, updateCompanyDto);
   }
 
