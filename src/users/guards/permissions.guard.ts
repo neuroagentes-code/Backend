@@ -1,13 +1,18 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, ForbiddenException, Inject, forwardRef } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { PERMISSIONS_KEY, Permission } from '../decorators/permissions.decorator';
 import { UserRole } from '../../auth/entities/user.entity';
+import { RolePermissionsService } from '../../common/services/role-permissions.service';
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
-  constructor(private readonly reflector: Reflector) {}
+  constructor(
+    private readonly reflector: Reflector,
+    @Inject(forwardRef(() => RolePermissionsService))
+    private readonly rolePermissionsService: RolePermissionsService,
+  ) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const requiredPermissions = this.reflector.getAllAndOverride<Permission[]>(PERMISSIONS_KEY, [
       context.getHandler(),
       context.getClass(),
@@ -17,8 +22,15 @@ export class PermissionsGuard implements CanActivate {
       return true;
     }
 
-    const { user } = context.switchToHttp().getRequest();
-    
+    const req = context.switchToHttp().getRequest();
+    console.log('Request recibido en PermissionsGuard:', {
+      headers: req.headers,
+      body: req.body,
+      user: req.user
+    });
+    const { user } = req;
+    console.log('Usuario autenticado:', user);
+
     if (!user) {
       throw new ForbiddenException('Usuario no autenticado');
     }
@@ -28,14 +40,17 @@ export class PermissionsGuard implements CanActivate {
       return true;
     }
 
+    // Obtener permisos por rol
+    const rolePermissions = await this.rolePermissionsService.getPermissionsByRole(user.role);
+    console.log('Permisos obtenidos por rol:', rolePermissions);
+
+
     // Verificar permisos específicos
     const hasPermission = requiredPermissions.every(permission => {
-      const userModulePermissions = user.permissions?.[permission.module];
-      
+      const userModulePermissions = rolePermissions?.[permission.module];
       if (!userModulePermissions) {
         return false;
       }
-
       return userModulePermissions[permission.action] === true;
     });
 

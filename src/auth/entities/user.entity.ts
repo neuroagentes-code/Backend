@@ -82,6 +82,14 @@ export class User extends BaseEntity {
   @Column({ nullable: true })
   companyId?: string;
 
+  // Relación con usuario que creó este registro
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: 'createdById' })
+  createdBy?: User;
+
+  @Column({ nullable: true })
+  createdById?: string;
+
   @BeforeInsert()
   @BeforeUpdate()
   async hashPassword() {

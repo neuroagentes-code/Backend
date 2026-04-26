@@ -24,4 +24,8 @@ export class GetUsersFilterDto extends PaginationDto {
   @IsOptional()
   @IsString()
   companyId?: string;
+
+  @IsOptional()
+  @IsString()
+  createdById?: string;
 }

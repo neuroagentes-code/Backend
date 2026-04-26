@@ -24,7 +24,7 @@ export class UsersService {
     private readonly rolePermissionsService: RolePermissionsService,
   ) {}
 
-  async create(createUserDto: CreateUserDto, profileImageFile?: Express.Multer.File): Promise<UserResponseDto> {
+  async create(createUserDto: CreateUserDto, profileImageFile?: Express.Multer.File, createdById?: string): Promise<UserResponseDto> {
     // Verificar si el email ya existe
     const existingUser = await this.userRepository.findOne({
       where: { email: createUserDto.email, deletedAt: IsNull() }
@@ -50,6 +50,7 @@ export class UsersService {
       ...createUserDto,
       password: temporaryPassword,
       profileImage: profileImageUrl,
+      createdById,
       // ✅ NUEVO: Los permisos vienen automáticamente del rol via role_permissions table
     });
 
@@ -61,20 +62,23 @@ export class UsersService {
     return this.createUserResponseWithImageUrl(savedUser);
   }
 
-  async findAll(filters: GetUsersFilterDto): Promise<PaginatedResponse<UserResponseDto>> {
-    const { page = 1, limit = 10, search, role, area, isActive, companyId } = filters;
-    
+  async findAll(filters: GetUsersFilterDto & { createdById?: string }): Promise<PaginatedResponse<UserResponseDto>> {
+    const { page = 1, limit = 10, search, role, area, isActive, companyId, createdById } = filters;
+
     const where: FindOptionsWhere<User> = {
       deletedAt: IsNull(),
     };
 
+    if (createdById) {
+      where.createdById = createdById;
+    }
+
     if (search) {
       const searchConditions = [
-        { firstName: Like(`%${search}%`), deletedAt: IsNull() },
-        { lastName: Like(`%${search}%`), deletedAt: IsNull() },
-        { email: Like(`%${search}%`), deletedAt: IsNull() },
+        { firstName: Like(`%${search}%`), deletedAt: IsNull(), ...(createdById ? { createdById } : {}) },
+        { lastName: Like(`%${search}%`), deletedAt: IsNull(), ...(createdById ? { createdById } : {}) },
+        { email: Like(`%${search}%`), deletedAt: IsNull(), ...(createdById ? { createdById } : {}) },
       ];
-      
       const [users, total] = await Promise.all([
         this.userRepository.find({
           where: searchConditions,
@@ -85,7 +89,6 @@ export class UsersService {
         }),
         this.userRepository.count({ where: searchConditions })
       ]);
-
       return await this.buildPaginatedResponse(users, total, page, limit);
     }
 
@@ -248,57 +251,6 @@ export class UsersService {
     }
     
     return userDto;
-  }
-
-  /**
-   * @deprecated Use RolePermissionsService.getPermissionsByRole() instead
-   * Esta función se mantiene solo para compatibilidad hacia atrás
-   */
-  private getDefaultPermissions(role: UserRole): UserPermissions {
-    const basePermissions: UserPermissions = {
-      agents: { view: false, create: false, edit: false, delete: false },
-      integrations: { view: false, create: false, edit: false, delete: false },
-      channels: { view: false, create: false, edit: false, delete: false },
-      users: { view: false, create: false, edit: false, delete: false },
-      subscriptions: { view: false, create: false, edit: false, delete: false },
-      profile: { view: true, create: false, edit: true, delete: false },
-    };
-
-    switch (role) {
-      case UserRole.SUPER_ADMIN:
-        return {
-          agents: { view: true, create: true, edit: true, delete: true },
-          integrations: { view: true, create: true, edit: true, delete: true },
-          channels: { view: true, create: true, edit: true, delete: true },
-          users: { view: true, create: true, edit: true, delete: true },
-          subscriptions: { view: true, create: true, edit: true, delete: true },
-          profile: { view: true, create: true, edit: true, delete: true },
-        };
-
-      case UserRole.ADMIN:
-        return {
-          agents: { view: true, create: true, edit: true, delete: false },
-          integrations: { view: true, create: true, edit: true, delete: false },
-          channels: { view: true, create: true, edit: true, delete: false },
-          users: { view: true, create: true, edit: true, delete: false },
-          subscriptions: { view: true, create: false, edit: false, delete: false },
-          profile: { view: true, create: false, edit: true, delete: false },
-        };
-
-      case UserRole.MANAGER:
-        return {
-          agents: { view: true, create: true, edit: true, delete: false },
-          integrations: { view: true, create: false, edit: false, delete: false },
-          channels: { view: true, create: true, edit: true, delete: false },
-          users: { view: true, create: false, edit: false, delete: false },
-          subscriptions: { view: true, create: false, edit: false, delete: false },
-          profile: { view: true, create: false, edit: true, delete: false },
-        };
-
-      case UserRole.USER:
-      default:
-        return basePermissions;
-    }
   }
 
   private async sendWelcomeEmail(user: User, temporaryPassword: string): Promise<void> {

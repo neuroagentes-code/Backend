@@ -12,6 +12,7 @@ import {
   UseInterceptors,
   BadRequestException,
   ParseUUIDPipe,
+  Req,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiConsumes, ApiBearerAuth } from '@nestjs/swagger';
@@ -60,8 +61,11 @@ export class UsersController {
   async create(
     @Body() createUserDto: CreateUserDto,
     @UploadedFile() file?: Express.Multer.File,
+    @Req() req?: any,
   ): Promise<UserResponseDto> {
-    return this.usersService.create(createUserDto, file);
+    // req.user debe contener el usuario autenticado (JwtStrategy)
+    const creatorId = req?.user?.id;
+    return this.usersService.create(createUserDto, file, creatorId);
   }
 
   @Get()
@@ -72,8 +76,14 @@ export class UsersController {
     description: 'Lista de usuarios obtenida exitosamente.',
     type: PaginatedResponse<UserResponseDto>
   })
-  async findAll(@Query() filters: GetUsersFilterDto): Promise<PaginatedResponse<UserResponseDto>> {
-    return this.usersService.findAll(filters);
+  async findAll(@Query() filters: GetUsersFilterDto, @Req() req?: any): Promise<PaginatedResponse<UserResponseDto>> {
+    // Solo mostrar los usuarios creados por el usuario autenticado
+    const creatorId = req?.user?.id;
+    // Calcular offset si no está presente
+    const page = filters.page ?? 1;
+    const limit = filters.limit ?? 10;
+    const offset = (page - 1) * limit;
+    return this.usersService.findAll({ ...filters, createdById: creatorId, offset });
   }
 
   @Get(':id')
