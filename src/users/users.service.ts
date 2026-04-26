@@ -56,8 +56,7 @@ export class UsersService {
 
     const savedUser = await this.userRepository.save(user);
 
-    // Enviar email con contraseña temporal
-    await this.sendWelcomeEmail(savedUser, temporaryPassword);
+    this.sendWelcomeEmail(savedUser, temporaryPassword);
 
     return this.createUserResponseWithImageUrl(savedUser);
   }
