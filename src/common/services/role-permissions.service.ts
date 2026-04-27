@@ -2,7 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { RolePermission } from '../../auth/entities/role-permission.entity';
-import { UserRole } from '../../auth/entities/user.entity';
+import { UserRole, User } from '../../auth/entities/user.entity';
+import { UserPermissionOverride } from '../../auth/entities/user-permission-override.entity';
 import { UserPermissions } from '../interfaces/permissions.interface';
 
 interface ModulePermissions {
@@ -22,24 +23,40 @@ export class RolePermissionsService {
   /**
    * 🎯 Obtener permisos de un rol específico
    */
-  async getPermissionsByRole(role: UserRole): Promise<UserPermissions> {
+  /**
+   * Obtener permisos de un rol específico considerando overrides de usuario
+   * Si userId es provisto, verifica si hay overrides en user_permission_overrides
+   */
+  async getPermissionsByRole(role: UserRole, userId: string): Promise<UserPermissions> {
+    // Buscar todos los permisos base por rol
     const permissions = await this.rolePermissionsRepository.find({
       where: { role, isActive: true },
       order: { module: 'ASC' },
     });
 
-    // Convertir a formato UserPermissions
-    const result: any = {};
-    
-    permissions.forEach(permission => {
-      result[permission.module] = {
-        view: permission.canView,
-        create: permission.canCreate,
-        edit: permission.canEdit,
-        delete: permission.canDelete,
-      };
+    // Buscar overrides para el usuario
+    const overrideRepo = this.rolePermissionsRepository.manager.getRepository(UserPermissionOverride);
+    const overrides = await overrideRepo.find({
+      where: { user: { id: String(userId) }, isActive: false },
+      relations: ['rolePermission'],
     });
+    // Crear un set de rolePermission.id desactivados
+    const disabledIds = new Set(overrides.map(o => o.rolePermission.id));
 
+    const result: any = {};
+    permissions.forEach(permission => {
+      // Si existe override inactivo, el permiso está desactivado
+      if (disabledIds.has(permission.id)) {
+        result[permission.module] = { view: false, create: false, edit: false, delete: false };
+      } else {
+        result[permission.module] = {
+          view: permission.canView,
+          create: permission.canCreate,
+          edit: permission.canEdit,
+          delete: permission.canDelete,
+        };
+      }
+    });
     // Asegurar que existen todos los módulos necesarios
     const defaultModules = ['agents', 'integrations', 'channels', 'users', 'subscriptions', 'profile'];
     defaultModules.forEach(module => {
@@ -47,7 +64,6 @@ export class RolePermissionsService {
         result[module] = { view: false, create: false, edit: false, delete: false };
       }
     });
-
     return result;
   }
 

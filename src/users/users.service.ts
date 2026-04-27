@@ -235,7 +235,7 @@ export class UsersService {
 
     // ✅ NUEVO: Obtener permisos basados en el rol del usuario
     try {
-      userDto.permissions = await this.rolePermissionsService.getPermissionsByRole(user.role);
+      userDto.permissions = await this.rolePermissionsService.getPermissionsByRole(user.role,user.id);
     } catch (error) {
       console.error(`Error getting role permissions for user ${user.id} with role ${user.role}:`, error);
       // En caso de error, mantener permisos vacíos por seguridad

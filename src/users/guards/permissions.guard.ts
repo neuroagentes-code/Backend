@@ -40,9 +40,9 @@ export class PermissionsGuard implements CanActivate {
       return true;
     }
 
-    // Obtener permisos por rol
-    const rolePermissions = await this.rolePermissionsService.getPermissionsByRole(user.role);
-    console.log('Permisos obtenidos por rol:', rolePermissions);
+    // Obtener permisos por rol y usuario
+    const rolePermissions = await this.rolePermissionsService.getPermissionsByRole(user.role, user.id);
+    console.log('Permisos obtenidos por rol y usuario:', rolePermissions);
 
 
     // Verificar permisos específicos
