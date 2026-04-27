@@ -15,4 +15,16 @@ export class UserPermissionOverride extends BaseEntity {
 
   @Column({ name: 'is_active', default: true })
   isActive: boolean;
+
+  @Column({ name: 'can_view', type: 'boolean', nullable: true })
+  canView?: boolean;
+
+  @Column({ name: 'can_create', type: 'boolean', nullable: true })
+  canCreate?: boolean;
+
+  @Column({ name: 'can_edit', type: 'boolean', nullable: true })
+  canEdit?: boolean;
+
+  @Column({ name: 'can_delete', type: 'boolean', nullable: true })
+  canDelete?: boolean;
 }

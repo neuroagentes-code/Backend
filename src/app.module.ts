@@ -10,6 +10,7 @@ import { RegistrationModule } from './registration/registration.module';
 import { UsersModule } from './users/users.module';
 import { CrmModule } from './crm/crm.module';
 import { ClientsModule } from './clients/clients.module';
+import { RolePermissionsModule } from './common/module';
 import configuration from './config/configuration';
 
 @Module({
@@ -59,6 +60,7 @@ import configuration from './config/configuration';
     UsersModule,
     CrmModule,
     ClientsModule,
+    RolePermissionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
