@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { RolePermission } from '../../auth/entities/role-permission.entity';
 import { UserRole } from '../../auth/entities/user.entity';
+import { UserPermissionOverride } from '../../auth/entities/user-permission-override.entity';
 import { UserPermissions } from '../interfaces/permissions.interface';
 
 interface ModulePermissions {
@@ -19,27 +20,37 @@ export class RolePermissionsService {
     private readonly rolePermissionsRepository: Repository<RolePermission>,
   ) {}
 
-  /**
-   * 🎯 Obtener permisos de un rol específico
-   */
-  async getPermissionsByRole(role: UserRole): Promise<UserPermissions> {
+  async getPermissionsByRole(role: UserRole, userId: string): Promise<UserPermissions> {
+    // Buscar todos los permisos base por rol
     const permissions = await this.rolePermissionsRepository.find({
       where: { role, isActive: true },
       order: { module: 'ASC' },
     });
 
-    // Convertir a formato UserPermissions
-    const result: any = {};
-    
-    permissions.forEach(permission => {
-      result[permission.module] = {
-        view: permission.canView,
-        create: permission.canCreate,
-        edit: permission.canEdit,
-        delete: permission.canDelete,
-      };
+    // Buscar overrides para el usuario
+    const overrideRepo = this.rolePermissionsRepository.manager.getRepository(UserPermissionOverride);
+    const overrides = await overrideRepo.find({
+      where: { user: { id: String(userId) } },
+      relations: ['rolePermission'],
+    });
+    // Mapear overrides por módulo
+    const overrideMap = new Map<string, UserPermissionOverride>();
+    overrides.forEach(o => {
+      if (o.rolePermission && o.rolePermission.module) {
+        overrideMap.set(o.rolePermission.module, o);
+      }
     });
 
+    const result: any = {};
+    permissions.forEach(permission => {
+      const override = overrideMap.get(permission.module);
+      result[permission.module] = {
+        view: (override && override.canView !== null && override.canView !== undefined) ? override.canView : permission.canView,
+        create: (override && override.canCreate !== null && override.canCreate !== undefined) ? override.canCreate : permission.canCreate,
+        edit: (override && override.canEdit !== null && override.canEdit !== undefined) ? override.canEdit : permission.canEdit,
+        delete: (override && override.canDelete !== null && override.canDelete !== undefined) ? override.canDelete : permission.canDelete,
+      };
+    });
     // Asegurar que existen todos los módulos necesarios
     const defaultModules = ['agents', 'integrations', 'channels', 'users', 'subscriptions', 'profile'];
     defaultModules.forEach(module => {
@@ -47,7 +58,6 @@ export class RolePermissionsService {
         result[module] = { view: false, create: false, edit: false, delete: false };
       }
     });
-
     return result;
   }
 
@@ -102,10 +112,10 @@ export class RolePermissionsService {
 
     // Actualizar permisos
     Object.assign(rolePermission, {
-      canView: permissions.view !== undefined ? permissions.view : rolePermission.canView,
-      canCreate: permissions.create !== undefined ? permissions.create : rolePermission.canCreate,
-      canEdit: permissions.edit !== undefined ? permissions.edit : rolePermission.canEdit,
-      canDelete: permissions.delete !== undefined ? permissions.delete : rolePermission.canDelete,
+      canView: permissions.view ?? rolePermission.canView,
+      canCreate: permissions.create ?? rolePermission.canCreate,
+      canEdit: permissions.edit ?? rolePermission.canEdit,
+      canDelete: permissions.delete ?? rolePermission.canDelete,
       updatedBy: updatedBy || 'system',
       isActive: true,
     });
@@ -287,5 +297,54 @@ export class RolePermissionsService {
       permissionsByRole,
       moduleUsage,
     };
+  }
+
+  /**
+   * Activar o desactivar un permiso para un usuario
+   */
+  async togglePermission(userId: string, permissionKey: string, action: 'view' | 'create' | 'edit' | 'delete', value: boolean) {
+    // Buscar el permiso por key
+    const rolePermission = await this.rolePermissionsRepository.findOne({ where: { module: permissionKey } });
+    if (!rolePermission) throw new Error('Permiso no encontrado');
+
+    const overrideRepo = this.rolePermissionsRepository.manager.getRepository(UserPermissionOverride);
+    let override = await overrideRepo.findOne({ where: { user: { id: String(userId) }, rolePermission: { id: rolePermission.id } }, relations: ['user', 'rolePermission'] });
+
+    if (!override) {
+      // Crear override si no existe
+      override = overrideRepo.create({ user: { id: String(userId) }, rolePermission });
+    }
+
+    // Actualizar solo el campo correspondiente
+    switch (action) {
+      case 'view': override.canView = value; break;
+      case 'create': override.canCreate = value; break;
+      case 'edit': override.canEdit = value; break;
+      case 'delete': override.canDelete = value; break;
+    }
+
+    await overrideRepo.save(override);
+    return { success: true };
+  }
+
+  /**
+   * Crear un nuevo permiso
+   */
+  async createPermission(key: string, description: string) {
+    // Crear permiso para todos los roles con valores por defecto (false)
+    const roles = Object.values(UserRole);
+    const permissions = roles.map(role => this.rolePermissionsRepository.create({
+      role,
+      module: key,
+      canView: false,
+      canCreate: false,
+      canEdit: false,
+      canDelete: false,
+      description,
+      isActive: true,
+      createdBy: 'api',
+    }));
+    await this.rolePermissionsRepository.save(permissions);
+    return { success: true };
   }
 }
