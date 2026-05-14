@@ -108,6 +108,21 @@ export class UsersService {
     return await this.buildPaginatedResponse(users, total, page, limit);
   }
 
+  async findAllNoPagination(companyId?: string): Promise<{ id: string; fullName: string }[]> {
+    const where: FindOptionsWhere<User> = { deletedAt: IsNull() };
+    if (companyId) {
+      where.company = { id: companyId };
+    }
+
+    const users = await this.userRepository.find({
+      where,
+      select: ['id', 'firstName', 'lastName'],
+      order: { createdAt: 'DESC' },
+    });
+
+    return users.map(u => ({ id: u.id, fullName: `${u.firstName} ${u.lastName}` }));
+  }
+
   async findOne(id: string): Promise<UserResponseDto> {
     const user = await this.userRepository.findOne({
       where: { id, deletedAt: IsNull() },

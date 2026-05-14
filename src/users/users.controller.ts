@@ -86,6 +86,20 @@ export class UsersController {
     return this.usersService.findAll({ ...filters, createdById: creatorId, offset });
   }
 
+  @Get('all')
+  @RequireUserPermission('view')
+  @ApiOperation({ summary: 'Obtener todos los usuarios sin paginación (id + companyName)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista completa de usuarios obtenida exitosamente.',
+  })
+  async findAllNoPagination(
+    @Query('companyId') companyId?: string,
+    @Req() req?: any,
+  ): Promise<{ id: string; fullName: string }[]> {
+    return this.usersService.findAllNoPagination(companyId);
+  }
+
   @Get(':id')
   @RequireUserPermission('view')
   @ApiOperation({ summary: 'Obtener un usuario por ID' })
